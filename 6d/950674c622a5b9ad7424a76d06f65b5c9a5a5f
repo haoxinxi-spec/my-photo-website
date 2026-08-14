@@ -1,0 +1,22 @@
+frontend/src/views/GuestGallery.vue
+  s_51df25f11fc8a6::t_8e85af03870d31 690-696,699-703,705-729,733-734,736-756,759,761-772,774-792,795-800,803-836
+  s_51df25f11fc8a6::t_7078cc29213120 44,47,50-78
+  s_51df25f11fc8a6::t_b833ecab703387 271-274
+  s_51df25f11fc8a6::t_e77af737258b68 306-311,320-353
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.40-trip",
+  "base_commit_sha": "6d950674c622a5b9ad7424a76d06f65b5c9a5a5f",
+  "prompts": {},
+  "sessions": {
+    "s_51df25f11fc8a6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "df0087a4-e7d2-43a1-9a5f-82edcb794f16",
+        "model": "arn:aws:bedrock:us-west-2:466494951737:application-inference-profile/rf6www9ej5dq"
+      },
+      "human_author": "haoxinxi <haoxinxi@example.com>"
+    }
+  }
+}
