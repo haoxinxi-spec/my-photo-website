@@ -1,0 +1,42 @@
+frontend/src/views/AdminNews.vue
+  s_51df25f11fc8a6::t_5021b6d079aaf6 32-49
+  s_51df25f11fc8a6::t_a27632fe940747 159-160,167,170-246
+  s_51df25f11fc8a6::t_161589e465ea89 692-762
+  s_51df25f11fc8a6::t_d45864cf16762f 75-90
+backend/src/main/java/com/photowebsite/controller/NewsController.java
+  s_51df25f11fc8a6::t_26c2b55651e3ec 181-208
+frontend/src/views/GuestGallery.vue
+  s_51df25f11fc8a6::t_0f0f8c2c13d782 425-428
+  s_51df25f11fc8a6::t_b4a59e63393b56 245-246
+  s_51df25f11fc8a6::t_8293783438afc9 85-92,94-96
+  s_51df25f11fc8a6::t_1c40f069f04eb8 273-277
+  s_51df25f11fc8a6::t_c8e65a244f7485 1085-1087
+  s_51df25f11fc8a6::t_a40e592bb9fa1f 1097-1098,1110,1121-1136,1143-1148,1160
+  s_51df25f11fc8a6::t_c0e905bebab8cd 137-138,142-143
+  s_51df25f11fc8a6::t_03a0d3a1fef4a3 912-954,961,965-969
+  s_51df25f11fc8a6::t_1ad7dd6d16048a 355,357-358,362,367-373,378-379
+backend/src/main/java/com/photowebsite/service/DataStore.java
+  s_51df25f11fc8a6::t_c50e6e7f109285 271-280
+  s_51df25f11fc8a6::t_5bdd1f40b6ab68 70
+frontend/src/views/NewsDetail.vue
+  s_51df25f11fc8a6::t_2f7a475856d6db 4,6,28-34,38,62,64-76,86-90,106-113
+  s_51df25f11fc8a6::t_8ba0b1c0395981 242-259
+backend/src/main/java/com/photowebsite/controller/SettingsController.java
+  s_51df25f11fc8a6::t_531b84dd7f8bfe 101-162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.40-trip",
+  "base_commit_sha": "209f198eed23965e8c534448b7ee7da202a4ef55",
+  "prompts": {},
+  "sessions": {
+    "s_51df25f11fc8a6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "df0087a4-e7d2-43a1-9a5f-82edcb794f16",
+        "model": "arn:aws:bedrock:us-west-2:466494951737:application-inference-profile/rf6www9ej5dq"
+      },
+      "human_author": "haoxinxi <haoxinxi@example.com>"
+    }
+  }
+}
