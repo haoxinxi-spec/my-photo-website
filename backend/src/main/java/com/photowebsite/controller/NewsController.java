@@ -178,6 +178,34 @@ public class NewsController {
         return response;
     }
 
+    @PostMapping("/inline-image")
+    public Map<String, Object> uploadInlineImage(@RequestParam("file") MultipartFile file,
+                                                  @RequestHeader(value = "Authorization", required = false) String token) throws IOException {
+        Map<String, Object> response = new HashMap<>();
+        if (!isAdmin(token)) {
+            response.put("success", false);
+            response.put("message", "Admin required");
+            return response;
+        }
+        if (file == null || file.isEmpty()) {
+            response.put("success", false);
+            response.put("message", "File is empty");
+            return response;
+        }
+        String original = file.getOriginalFilename();
+        String ext = "";
+        if (original != null && original.contains(".")) {
+            ext = original.substring(original.lastIndexOf("."));
+        }
+        String filename = "inline_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + ext;
+        File dest = new File(uploadDir, filename);
+        file.transferTo(dest);
+        response.put("success", true);
+        response.put("filename", filename);
+        response.put("imageUrl", "/uploads/" + filename);
+        return response;
+    }
+
     @DeleteMapping("/{id}")
     public Map<String, Object> delete(@PathVariable String id,
                                        @RequestHeader(value = "Authorization", required = false) String token) throws IOException {

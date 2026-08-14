@@ -1,9 +1,9 @@
 <template>
   <div class="detail-page">
     <header class="site-header">
-      <div class="brand" @click="$router.push('/gallery')">Haoxin Xia</div>
+      <div class="brand" @click="goGallery">Haoxin Xia</div>
       <nav class="site-nav">
-        <a class="nav-item" @click="$router.push('/gallery')">← BACK TO GALLERY</a>
+        <a class="nav-item" @click="goNewsList">← BACK TO NEWS</a>
       </nav>
     </header>
 
@@ -25,11 +25,17 @@
         </div>
 
         <div class="article-body">
-          <p v-for="(p, i) in paragraphs" :key="i">{{ p }}</p>
+          <template v-for="(block, i) in blocks" :key="i">
+            <figure v-if="block.type === 'image'" class="inline-figure">
+              <img :src="'/uploads/' + block.filename" :alt="block.caption || ''" />
+              <figcaption v-if="block.caption">{{ block.caption }}</figcaption>
+            </figure>
+            <p v-else>{{ block.text }}</p>
+          </template>
         </div>
 
         <div class="article-footer">
-          <button class="back-btn" @click="$router.push('/gallery')">
+          <button class="back-btn" @click="goNewsList">
             ← Back to News
           </button>
         </div>
@@ -53,9 +59,21 @@ export default {
     id() {
       return this.$route.params.id
     },
-    paragraphs() {
+    blocks() {
       if (!this.item || !this.item.content) return []
-      return this.item.content.split(/\n+/).map(s => s.trim()).filter(Boolean)
+      const raw = this.item.content
+      const out = []
+      const regex = /\[\[image:([^\|\]]+)(?:\|([^\]]*))?\]\]/g
+      let last = 0
+      let m
+      while ((m = regex.exec(raw)) !== null) {
+        const before = raw.slice(last, m.index)
+        this.pushParagraphs(out, before)
+        out.push({ type: 'image', filename: m[1].trim(), caption: (m[2] || '').trim() })
+        last = m.index + m[0].length
+      }
+      this.pushParagraphs(out, raw.slice(last))
+      return out
     }
   },
   watch: {
@@ -65,6 +83,11 @@ export default {
     }
   },
   methods: {
+    pushParagraphs(out, text) {
+      if (!text) return
+      const paras = text.split(/\n+/).map(s => s.trim()).filter(Boolean)
+      for (const p of paras) out.push({ type: 'p', text: p })
+    },
     async fetch() {
       this.loading = true
       this.item = null
@@ -80,6 +103,14 @@ export default {
     formatDate(ts) {
       if (!ts) return ''
       return new Date(ts).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    },
+    goNewsList() {
+      this.$router.push({ path: '/gallery', query: { tab: 'news' } })
+    },
+    goGallery() {
+      // 品牌名点击去 portfolio，同时清掉 news 保存的滚动
+      sessionStorage.removeItem('newsScroll')
+      this.$router.push('/gallery')
     }
   }
 }
@@ -206,6 +237,24 @@ export default {
   line-height: 1.9;
   color: #2c3e50;
   margin-bottom: 20px;
+}
+
+.inline-figure {
+  margin: 32px 0;
+}
+
+.inline-figure img {
+  width: 100%;
+  display: block;
+}
+
+.inline-figure figcaption {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #909399;
+  font-style: italic;
+  text-align: center;
+  line-height: 1.6;
 }
 
 .article-footer {

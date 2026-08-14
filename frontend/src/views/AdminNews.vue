@@ -29,6 +29,24 @@
         <button class="btn-primary" @click="startCreate">+ New Article</button>
       </header>
 
+      <section class="section">
+        <div class="section-title-row">
+          <div class="section-title">News Page Banner</div>
+          <div class="section-actions">
+            <label class="btn-ghost" for="banner-input">
+              {{ bannerUrl ? 'Replace Banner' : 'Upload Banner' }}
+            </label>
+            <input id="banner-input" type="file" accept="image/*" @change="handleBannerUpload" style="display:none" />
+            <button v-if="bannerUrl" class="btn-ghost danger" @click="deleteBanner">Remove</button>
+          </div>
+        </div>
+        <div class="banner-preview">
+          <img v-if="bannerUrl" :src="bannerUrl" alt="News banner" />
+          <div v-else class="banner-empty">No banner. A plain title will be shown instead.</div>
+        </div>
+        <p class="hint">Displayed at the top of the guest News page. Recommended: wide landscape image (2400×800 or similar).</p>
+      </section>
+
       <section v-if="editing" class="section editor">
         <div class="editor-header">
           <div class="section-title">{{ editing.id ? 'Edit Article' : 'New Article' }}</div>
@@ -54,8 +72,22 @@
           <textarea v-model="editing.summary" rows="2" placeholder="Short lead paragraph shown on the news list..."></textarea>
         </div>
         <div class="form-row">
-          <label>Content</label>
-          <textarea v-model="editing.content" rows="10" placeholder="Full article. Blank lines separate paragraphs."></textarea>
+          <div class="label-row">
+            <label>Content</label>
+            <div class="content-tools">
+              <label class="btn-tiny" for="inline-image-input">
+                {{ inlineUploading ? 'Uploading...' : '+ Insert Image' }}
+              </label>
+              <input id="inline-image-input" type="file" accept="image/*" @change="handleInlineImage" style="display:none" />
+            </div>
+          </div>
+          <textarea
+            ref="contentBox"
+            v-model="editing.content"
+            rows="12"
+            placeholder="Full article. Blank lines separate paragraphs. Use the Insert Image button to add images with captions inline."
+          ></textarea>
+          <p class="hint">Inline images are stored as <code>[[image:filename|caption]]</code>. You can edit the caption text directly in the article.</p>
         </div>
         <div class="form-row">
           <label class="inline">
@@ -124,14 +156,94 @@ export default {
       loading: false,
       saving: false,
       status: null,
+      bannerUrl: null,
+      inlineUploading: false,
       displayName: localStorage.getItem('displayName') || 'Admin',
       role: localStorage.getItem('role') || 'admin'
     }
   },
   mounted() {
     this.fetch()
+    this.fetchBanner()
   },
   methods: {
+    async fetchBanner() {
+      try {
+        const res = await axios.get('/api/settings/news-banner')
+        if (res.data.success) this.bannerUrl = res.data.imageUrl
+      } catch (e) {
+        console.error(e)
+      }
+    },
+    async handleBannerUpload(event) {
+      const file = event.target.files[0]
+      if (!file) return
+      const token = localStorage.getItem('token')
+      const formData = new FormData()
+      formData.append('file', file)
+      try {
+        const res = await axios.post('/api/settings/news-banner', formData, {
+          headers: { Authorization: token }
+        })
+        if (res.data.success) this.bannerUrl = res.data.imageUrl
+        else alert(res.data.message || 'Upload failed')
+      } catch (e) {
+        alert('Upload failed')
+      }
+      event.target.value = ''
+    },
+    async deleteBanner() {
+      if (!confirm('Remove the news banner?')) return
+      const token = localStorage.getItem('token')
+      try {
+        const res = await axios.delete('/api/settings/news-banner', {
+          headers: { Authorization: token }
+        })
+        if (res.data.success) this.bannerUrl = null
+      } catch (e) {
+        alert('Delete failed')
+      }
+    },
+    async handleInlineImage(event) {
+      const file = event.target.files[0]
+      if (!file) return
+      const token = localStorage.getItem('token')
+      this.inlineUploading = true
+      const formData = new FormData()
+      formData.append('file', file)
+      try {
+        const res = await axios.post('/api/news/inline-image', formData, {
+          headers: { Authorization: token }
+        })
+        if (res.data.success) {
+          this.insertAtCursor(`\n\n[[image:${res.data.filename}|Caption here]]\n\n`)
+        } else {
+          alert(res.data.message || 'Upload failed')
+        }
+      } catch (e) {
+        alert('Upload failed')
+      } finally {
+        this.inlineUploading = false
+        event.target.value = ''
+      }
+    },
+    insertAtCursor(text) {
+      const ta = this.$refs.contentBox
+      if (!ta) {
+        this.editing.content = (this.editing.content || '') + text
+        return
+      }
+      const start = ta.selectionStart
+      const end = ta.selectionEnd
+      const before = (this.editing.content || '').slice(0, start)
+      const after = (this.editing.content || '').slice(end)
+      this.editing.content = before + text + after
+      this.$nextTick(() => {
+        ta.focus()
+        const pos = before.length + text.length
+        ta.setSelectionRange(pos, pos)
+      })
+    },
     async fetch() {
       this.loading = true
       try {
@@ -577,4 +689,75 @@ export default {
   gap: 4px;
   flex-shrink: 0;
 }
+
+.banner-preview {
+  width: 100%;
+  aspect-ratio: 3 / 1;
+  background: #f5f7fa;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #ebeef5;
+}
+
+.banner-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.banner-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c0c4cc;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.hint {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.hint code {
+  background: #f5f7fa;
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-size: 11px;
+}
+
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.label-row label {
+  margin-bottom: 0;
+}
+
+.content-tools {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-tiny {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #f5f7fa;
+  color: #606266;
+  border: 1px solid #dcdfe6;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  transition: background 0.15s;
+}
+
+.btn-tiny:hover { background: #ebeef5; }
 </style>

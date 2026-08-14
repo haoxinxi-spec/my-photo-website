@@ -82,10 +82,18 @@
 
       <!-- NEWS: 三栏 -->
       <section v-else-if="activeNav === 'news'" class="news-section">
+        <div v-if="newsBannerUrl" class="news-banner">
+          <img :src="newsBannerUrl" alt="News banner" />
+          <div class="news-banner-overlay">
+            <div class="news-banner-title">News</div>
+            <div class="news-banner-sub">Updates, announcements and stories</div>
+          </div>
+        </div>
+
         <div class="news-top">
-          <div class="news-heading">
-            <div class="news-title">News</div>
-            <div class="news-subtitle">Updates, announcements and stories.</div>
+          <div class="news-heading" :class="{ collapsed: !!newsBannerUrl }">
+            <div v-if="!newsBannerUrl" class="news-title">News</div>
+            <div v-if="!newsBannerUrl" class="news-subtitle">Updates, announcements and stories.</div>
           </div>
           <div class="news-search" v-click-outside="closeSuggest">
             <div class="search-wrap">
@@ -126,15 +134,13 @@
               :key="n.id"
               class="news-card"
             >
+              <h2 class="nc-title">{{ n.title }}</h2>
+              <div class="nc-sub">{{ n.subtitle || formatSubtitle(n) }}</div>
               <div v-if="n.coverUrl" class="nc-cover">
                 <img :src="n.coverUrl" :alt="n.title" />
               </div>
-              <div class="nc-body">
-                <h2 class="nc-title">{{ n.title }}</h2>
-                <div class="nc-sub">{{ n.subtitle || formatSubtitle(n) }}</div>
-                <p class="nc-summary">{{ n.summary || truncate(n.content, 220) }}</p>
-                <button class="learn-more" @click="goDetail(n.id)">Learn more →</button>
-              </div>
+              <p class="nc-summary">{{ n.summary || cleanContentPreview(n.content) }}</p>
+              <button class="learn-more" @click="goDetail(n.id)">Learn more →</button>
             </article>
           </div>
 
@@ -236,6 +242,8 @@ export default {
       newsItems: [],
       hotItems: [],
       newsLoading: false,
+      newsBannerUrl: null,
+      newsScrollPos: 0,
       searchQuery: '',
       suggestions: [],
       showSuggest: false,
@@ -262,6 +270,11 @@ export default {
   mounted() {
     this.fetchCollections()
     this.fetchAbout()
+    // 如果 URL 有 ?tab=news，直接切到 news
+    const q = this.$route.query || {}
+    if (q.tab && this.navItems.find(n => n.key === q.tab)) {
+      this.setActive(q.tab)
+    }
   },
   methods: {
     setActive(key) {
@@ -339,20 +352,31 @@ export default {
     async fetchNews() {
       this.newsLoading = true
       try {
-        const [listRes, hotRes] = await Promise.all([
+        const [listRes, hotRes, bannerRes] = await Promise.all([
           axios.get('/api/news/list'),
-          axios.get('/api/news/hot')
+          axios.get('/api/news/hot'),
+          axios.get('/api/settings/news-banner')
         ])
         if (listRes.data.success) this.newsItems = listRes.data.items
         if (hotRes.data.success) this.hotItems = hotRes.data.items
+        if (bannerRes.data.success) this.newsBannerUrl = bannerRes.data.imageUrl
       } catch (e) {
         console.error(e)
       } finally {
         this.newsLoading = false
+        // 恢复滚动位置
+        const saved = parseInt(sessionStorage.getItem('newsScroll') || '0', 10)
+        if (saved > 0) {
+          this.$nextTick(() => {
+            setTimeout(() => window.scrollTo(0, saved), 60)
+          })
+        }
       }
     },
     goDetail(id) {
       this.showSuggest = false
+      // 记住滚动位置
+      sessionStorage.setItem('newsScroll', String(window.scrollY || window.pageYOffset || 0))
       this.$router.push(`/news/${id}`)
     },
     onSearchInput() {
@@ -398,6 +422,10 @@ export default {
     truncate(text, len) {
       if (!text) return ''
       return text.length > len ? text.slice(0, len) + '...' : text
+    },
+    cleanContentPreview(text) {
+      if (!text) return ''
+      return text.replace(/\[\[image:[^\]]+\]\]/g, '').replace(/\s+/g, ' ').trim()
     }
   },
   directives: {
@@ -881,17 +909,64 @@ export default {
 .news-section {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px 0 40px;
+  padding: 0 0 40px;
+}
+
+.news-banner {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 1;
+  max-height: 380px;
+  overflow: hidden;
+  margin-bottom: 32px;
+}
+
+.news-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.news-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 40px 48px;
+}
+
+.news-banner-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 56px;
+  color: #fff;
+  letter-spacing: 3px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.35);
+}
+
+.news-banner-sub {
+  font-size: 13px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.9);
+  margin-top: 8px;
 }
 
 .news-top {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  padding-bottom: 20px;
+  padding: 0 0 20px;
   border-bottom: 1px solid #ebeef5;
   margin-bottom: 32px;
   gap: 24px;
+  min-height: 44px;
+}
+
+.news-heading.collapsed {
+  flex: 1;
 }
 
 .news-title {
@@ -1007,6 +1082,9 @@ export default {
   .news-grid { grid-template-columns: 1fr; gap: 32px; }
   .news-search { width: 100%; max-width: 100%; }
   .news-top { flex-direction: column; align-items: stretch; }
+  .news-banner { aspect-ratio: 16 / 9; }
+  .news-banner-overlay { padding: 24px; }
+  .news-banner-title { font-size: 36px; }
 }
 
 .news-main {
@@ -1016,9 +1094,8 @@ export default {
 }
 
 .news-card {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
+  display: flex;
+  flex-direction: column;
   padding-bottom: 32px;
   border-bottom: 1px solid #ebeef5;
 }
@@ -1028,23 +1105,9 @@ export default {
   padding-bottom: 0;
 }
 
-.nc-cover {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  background: #f5f7fa;
-}
-
-.nc-cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
 .nc-title {
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 700;
   color: #1a1a1a;
   line-height: 1.25;
@@ -1055,14 +1118,34 @@ export default {
   font-size: 12px;
   color: #a0a4ab;
   letter-spacing: 0.5px;
-  margin-bottom: 12px;
+  margin-bottom: 18px;
+}
+
+.nc-cover {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #f5f7fa;
+  margin-bottom: 18px;
+}
+
+.nc-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .nc-summary {
   font-size: 15px;
   color: #4a4a4a;
   line-height: 1.75;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .learn-more {
@@ -1074,6 +1157,7 @@ export default {
   padding: 6px 0;
   border-bottom: 1px solid #1a1a1a;
   border-radius: 0;
+  align-self: flex-start;
   transition: opacity 0.2s;
 }
 

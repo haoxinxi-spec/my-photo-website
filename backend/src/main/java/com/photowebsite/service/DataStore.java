@@ -67,6 +67,7 @@ public class DataStore {
         if (!about.containsKey("imageFilename")) about.put("imageFilename", null);
         if (!about.containsKey("imageCaption")) about.put("imageCaption", "");
         if (!settings.containsKey("loginBgFilename")) settings.put("loginBgFilename", null);
+        if (!settings.containsKey("newsBannerFilename")) settings.put("newsBannerFilename", null);
         if (news.isEmpty()) seedSampleNews();
         saveAbout();
         saveSettings();
@@ -264,6 +265,16 @@ public class DataStore {
 
     public synchronized void setLoginBgFilename(String filename) throws IOException {
         settings.put("loginBgFilename", filename);
+        saveSettings();
+    }
+
+    public synchronized String getNewsBannerFilename() {
+        Object v = settings.get("newsBannerFilename");
+        return v == null ? null : String.valueOf(v);
+    }
+
+    public synchronized void setNewsBannerFilename(String filename) throws IOException {
+        settings.put("newsBannerFilename", filename);
         saveSettings();
     }
 
