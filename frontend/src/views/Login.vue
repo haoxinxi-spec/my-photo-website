@@ -1,5 +1,5 @@
 <template>
-  <div class="login-container">
+  <div class="login-container" :style="bgStyle">
     <div class="login-box">
       <div class="brand">
         <div class="brand-name">Haoxin Xia</div>
@@ -76,8 +76,20 @@ export default {
       regPassword: '',
       regDisplayName: '',
       errorMsg: '',
-      loading: false
+      loading: false,
+      bgUrl: null
     }
+  },
+  computed: {
+    bgStyle() {
+      const url = this.bgUrl || '/login-bg.jpg'
+      return {
+        backgroundImage: `url('${url}')`
+      }
+    }
+  },
+  mounted() {
+    this.fetchBg()
   },
   watch: {
     mode() {
@@ -85,6 +97,16 @@ export default {
     }
   },
   methods: {
+    async fetchBg() {
+      try {
+        const res = await axios.get('/api/settings/login-bg')
+        if (res.data.success && res.data.imageUrl) {
+          this.bgUrl = res.data.imageUrl
+        }
+      } catch (e) {
+        // ignore, fall back to default
+      }
+    },
     saveSession(data) {
       localStorage.setItem('token', data.token)
       localStorage.setItem('username', data.username)
@@ -143,7 +165,7 @@ export default {
   justify-content: center;
   align-items: center;
   padding: 20px;
-  background-image: url('/login-bg.jpg');
+  background-color: #1a1a1a;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

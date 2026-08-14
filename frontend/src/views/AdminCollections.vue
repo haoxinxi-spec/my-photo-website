@@ -12,6 +12,9 @@
         <router-link to="/admin/about" class="nav-link" exact-active-class="active">
           About
         </router-link>
+        <router-link to="/admin/appearance" class="nav-link" exact-active-class="active">
+          Appearance
+        </router-link>
       </nav>
       <div class="sidebar-footer">
         <div class="user-info">

@@ -3,6 +3,7 @@ import Login from '../views/Login.vue'
 import AdminCollections from '../views/AdminCollections.vue'
 import AdminCollectionDetail from '../views/AdminCollectionDetail.vue'
 import AdminAbout from '../views/AdminAbout.vue'
+import AdminAppearance from '../views/AdminAppearance.vue'
 import GuestGallery from '../views/GuestGallery.vue'
 
 const routes = [
@@ -24,6 +25,12 @@ const routes = [
     path: '/admin/about',
     name: 'AdminAbout',
     component: AdminAbout,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/appearance',
+    name: 'AdminAppearance',
+    component: AdminAppearance,
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {

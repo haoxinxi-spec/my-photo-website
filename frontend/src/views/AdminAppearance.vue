@@ -22,43 +22,28 @@
     <main class="main">
       <header class="topbar">
         <div>
-          <h1>About</h1>
-          <p class="subtitle">Edit the introduction and portrait shown on the public site.</p>
+          <h1>Appearance</h1>
+          <p class="subtitle">Customize public-facing visuals.</p>
         </div>
       </header>
 
       <section class="section">
-        <div class="section-title">Introduction Text</div>
-        <textarea
-          v-model="text"
-          rows="10"
-          placeholder="Write your introduction here. Use blank lines to separate paragraphs."
-        ></textarea>
-        <div class="row-actions">
-          <span v-if="textStatus" class="status" :class="textStatus.type">{{ textStatus.msg }}</span>
-          <button class="btn-primary" :disabled="savingText" @click="saveText">
-            {{ savingText ? 'Saving...' : 'Save Text' }}
-          </button>
-        </div>
-      </section>
-
-      <section class="section">
         <div class="section-title-row">
-          <div class="section-title">Portrait Image</div>
+          <div class="section-title">Login Background</div>
           <div class="section-actions">
-            <label class="btn-ghost" for="about-image-input">
+            <label class="btn-ghost" for="login-bg-input">
               {{ imageUrl ? 'Replace Image' : 'Upload Image' }}
             </label>
-            <input id="about-image-input" type="file" accept="image/*" @change="handleImageUpload" style="display:none" />
-            <button v-if="imageUrl" class="btn-ghost danger" @click="deleteImage">Delete Image</button>
+            <input id="login-bg-input" type="file" accept="image/*" @change="handleUpload" style="display:none" />
+            <button v-if="imageUrl" class="btn-ghost danger" @click="deleteImage">Reset to Default</button>
           </div>
         </div>
         <div v-if="uploading" class="status info">Uploading...</div>
         <div class="image-preview">
-          <img v-if="imageUrl" :src="imageUrl" alt="About portrait" />
-          <div v-else class="image-empty">No image uploaded</div>
+          <img v-if="imageUrl" :src="imageUrl" alt="Login background" />
+          <img v-else src="/login-bg.jpg" alt="Default login background" />
         </div>
-        <p class="hint">This image is displayed on the right side of the About section on the guest gallery.</p>
+        <p class="hint">This image is shown as the background of the login page. Recommended: high-resolution landscape image (1920×1080 or larger).</p>
       </section>
     </main>
   </div>
@@ -68,14 +53,11 @@
 import axios from 'axios'
 
 export default {
-  name: 'AdminAbout',
+  name: 'AdminAppearance',
   data() {
     return {
-      text: '',
       imageUrl: null,
-      savingText: false,
       uploading: false,
-      textStatus: null,
       displayName: localStorage.getItem('displayName') || 'Admin',
       role: localStorage.getItem('role') || 'admin'
     }
@@ -86,36 +68,13 @@ export default {
   methods: {
     async fetch() {
       try {
-        const res = await axios.get('/api/about')
-        if (res.data.success) {
-          this.text = res.data.text || ''
-          this.imageUrl = res.data.imageUrl || null
-        }
+        const res = await axios.get('/api/settings/login-bg')
+        if (res.data.success) this.imageUrl = res.data.imageUrl
       } catch (e) {
         console.error(e)
       }
     },
-    async saveText() {
-      const token = localStorage.getItem('token')
-      this.savingText = true
-      this.textStatus = null
-      try {
-        const res = await axios.put('/api/about/text', { text: this.text }, {
-          headers: { Authorization: token }
-        })
-        if (res.data.success) {
-          this.textStatus = { type: 'ok', msg: 'Saved' }
-        } else {
-          this.textStatus = { type: 'error', msg: res.data.message || 'Save failed' }
-        }
-      } catch (e) {
-        this.textStatus = { type: 'error', msg: 'Network error' }
-      } finally {
-        this.savingText = false
-        setTimeout(() => { this.textStatus = null }, 3000)
-      }
-    },
-    async handleImageUpload(event) {
+    async handleUpload(event) {
       const file = event.target.files[0]
       if (!file) return
       const token = localStorage.getItem('token')
@@ -123,7 +82,7 @@ export default {
       const formData = new FormData()
       formData.append('file', file)
       try {
-        const res = await axios.post('/api/about/image', formData, {
+        const res = await axios.post('/api/settings/login-bg', formData, {
           headers: { Authorization: token }
         })
         if (res.data.success) {
@@ -139,15 +98,13 @@ export default {
       }
     },
     async deleteImage() {
-      if (!confirm('Delete the current portrait image?')) return
+      if (!confirm('Reset login background to default?')) return
       const token = localStorage.getItem('token')
       try {
-        const res = await axios.delete('/api/about/image', {
+        const res = await axios.delete('/api/settings/login-bg', {
           headers: { Authorization: token }
         })
-        if (res.data.success) {
-          this.imageUrl = null
-        }
+        if (res.data.success) this.imageUrl = null
       } catch (e) {
         alert('Delete failed')
       }
@@ -287,7 +244,6 @@ export default {
   letter-spacing: 2px;
   text-transform: uppercase;
   color: #606266;
-  margin-bottom: 16px;
 }
 
 .section-title-row {
@@ -297,75 +253,15 @@ export default {
   margin-bottom: 16px;
 }
 
-.section-title-row .section-title {
-  margin-bottom: 0;
-}
-
 .section-actions {
   display: flex;
   gap: 8px;
 }
 
-.section textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.7;
-  color: #2c3e50;
-  resize: vertical;
-}
-
-.section textarea:focus {
-  outline: none;
-  border-color: #1a1a1a;
-}
-
-.row-actions {
-  margin-top: 12px;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 12px;
-}
-
-.status {
-  font-size: 12px;
-}
-
-.status.ok {
-  color: #67c23a;
-}
-
-.status.error {
-  color: #f56c6c;
-}
-
 .status.info {
   color: #909399;
-  margin-bottom: 12px;
-}
-
-.btn-primary {
-  padding: 8px 16px;
-  background: #1a1a1a;
-  color: #fff;
-  border-radius: 4px;
   font-size: 12px;
-  letter-spacing: 1px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #333;
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  margin-bottom: 12px;
 }
 
 .btn-ghost {
@@ -394,9 +290,9 @@ export default {
 }
 
 .image-preview {
-  width: 320px;
-  max-width: 100%;
-  aspect-ratio: 3 / 4;
+  width: 100%;
+  max-width: 640px;
+  aspect-ratio: 16 / 9;
   background: #f5f7fa;
   border-radius: 4px;
   overflow: hidden;
@@ -408,18 +304,6 @@ export default {
   height: 100%;
   object-fit: cover;
   display: block;
-}
-
-.image-empty {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #c0c4cc;
-  font-size: 12px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
 }
 
 .hint {

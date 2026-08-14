@@ -20,6 +20,7 @@ public class DataStore {
     private File usersFile;
     private File collectionsFile;
     private File aboutFile;
+    private File settingsFile;
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -29,6 +30,8 @@ public class DataStore {
     private List<Map<String, Object>> collections = new ArrayList<>();
     // about: { text, imageFilename }
     private Map<String, Object> about = new LinkedHashMap<>();
+    // settings: { loginBgFilename }
+    private Map<String, Object> settings = new LinkedHashMap<>();
 
     @PostConstruct
     public synchronized void init() throws IOException {
@@ -37,6 +40,7 @@ public class DataStore {
         usersFile = new File(dataDir, "users.json");
         collectionsFile = new File(dataDir, "collections.json");
         aboutFile = new File(dataDir, "about.json");
+        settingsFile = new File(dataDir, "settings.json");
 
         if (usersFile.exists()) {
             users = mapper.readValue(usersFile, new TypeReference<Map<String, Map<String, String>>>() {});
@@ -47,13 +51,20 @@ public class DataStore {
         if (aboutFile.exists()) {
             about = mapper.readValue(aboutFile, new TypeReference<Map<String, Object>>() {});
         }
+        if (settingsFile.exists()) {
+            settings = mapper.readValue(settingsFile, new TypeReference<Map<String, Object>>() {});
+        }
         if (!about.containsKey("text")) {
             about.put("text", "I'm Haoxin Xia — a photographer capturing quiet moments between light and shadow. This site is a personal archive of the images I keep returning to.");
         }
         if (!about.containsKey("imageFilename")) {
             about.put("imageFilename", null);
         }
+        if (!settings.containsKey("loginBgFilename")) {
+            settings.put("loginBgFilename", null);
+        }
         saveAbout();
+        saveSettings();
 
         // 保证默认账号存在
         if (!users.containsKey("admin")) {
@@ -226,5 +237,21 @@ public class DataStore {
 
     public synchronized void saveAbout() throws IOException {
         mapper.writerWithDefaultPrettyPrinter().writeValue(aboutFile, about);
+    }
+
+    // ---------------- Settings ----------------
+
+    public synchronized String getLoginBgFilename() {
+        Object v = settings.get("loginBgFilename");
+        return v == null ? null : String.valueOf(v);
+    }
+
+    public synchronized void setLoginBgFilename(String filename) throws IOException {
+        settings.put("loginBgFilename", filename);
+        saveSettings();
+    }
+
+    public synchronized void saveSettings() throws IOException {
+        mapper.writerWithDefaultPrettyPrinter().writeValue(settingsFile, settings);
     }
 }
