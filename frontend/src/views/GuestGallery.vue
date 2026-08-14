@@ -41,20 +41,41 @@
         </div>
       </section>
 
-      <!-- SELECTED WORKS: 所有照片汇总 -->
+      <!-- SELECTED WORKS: 随机抽取，瀑布流，单击翻面/双击预览 -->
       <section v-else-if="activeNav === 'selected'" class="selected">
         <div v-if="loading" class="state">Loading...</div>
-        <div v-else-if="allPhotos.length === 0" class="state">
+        <div v-else-if="selectedPhotos.length === 0" class="state">
           No works available yet.
         </div>
-        <div v-else class="selected-grid">
-          <div
-            v-for="(photo, idx) in allPhotos"
-            :key="photo.filename"
-            class="sw-item"
-            @click="openPreview(photo)"
-          >
-            <img :src="photo.url" :alt="photo.filename" loading="lazy" />
+        <div v-else>
+          <div class="selected-header">
+            <div class="sw-title">Selected Works</div>
+            <button class="shuffle-btn" @click="reshuffleSelected">↻ Shuffle</button>
+          </div>
+          <div class="sw-masonry">
+            <div
+              v-for="(photo, idx) in selectedPhotos"
+              :key="photo.filename"
+              class="sw-item"
+              :class="['variant-' + (idx % 5), { flipped: flippedKey === photo.filename }]"
+              @click="onSelectedClick($event, photo)"
+            >
+              <div class="sw-card">
+                <div class="sw-face sw-front">
+                  <img :src="photo.url" :alt="photo.filename" loading="lazy" />
+                </div>
+                <div class="sw-face sw-back">
+                  <div class="sw-back-inner">
+                    <div class="sw-back-label">From</div>
+                    <div class="sw-back-collection">{{ photo._collectionTitle }}</div>
+                    <div class="sw-back-divider"></div>
+                    <div class="sw-back-desc" v-if="photo.description">{{ photo.description }}</div>
+                    <div class="sw-back-desc muted" v-else>No description for this photo.</div>
+                    <div class="sw-back-hint">Double-click to view fullscreen</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -247,7 +268,10 @@ export default {
       searchQuery: '',
       suggestions: [],
       showSuggest: false,
-      searchDebounce: null
+      searchDebounce: null,
+      selectedPhotos: [],
+      flippedKey: null,
+      clickTimer: null
     }
   },
   computed: {
@@ -279,8 +303,12 @@ export default {
   methods: {
     setActive(key) {
       this.activeNav = key
-      if (key === 'selected' && this.collectionsDetailed.length === 0) {
-        this.fetchAllDetails()
+      if (key === 'selected') {
+        if (this.collectionsDetailed.length === 0) {
+          this.fetchAllDetails().then(() => this.buildSelected())
+        } else if (this.selectedPhotos.length === 0) {
+          this.buildSelected()
+        }
       }
       if (key === 'about') {
         this.fetchAbout()
@@ -288,6 +316,41 @@ export default {
       if (key === 'news') {
         this.fetchNews()
       }
+    },
+    buildSelected() {
+      const pool = []
+      for (const c of this.collectionsDetailed) {
+        for (const p of (c.photos || [])) {
+          pool.push({ ...p, _collectionTitle: c.title })
+        }
+      }
+      // Fisher-Yates shuffle
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[pool[i], pool[j]] = [pool[j], pool[i]]
+      }
+      // 展示上限 24 张，避免过多
+      this.selectedPhotos = pool.slice(0, 24)
+      this.flippedKey = null
+    },
+    reshuffleSelected() {
+      this.buildSelected()
+    },
+    onSelectedClick(event, photo) {
+      // 区分单击（翻面）和双击（预览）
+      if (this.clickTimer) {
+        clearTimeout(this.clickTimer)
+        this.clickTimer = null
+        // 双击 → 预览
+        this.flippedKey = null
+        this.openPreview(photo)
+        return
+      }
+      this.clickTimer = setTimeout(() => {
+        this.clickTimer = null
+        // 单击 → 翻面
+        this.flippedKey = this.flippedKey === photo.filename ? null : photo.filename
+      }, 240)
     },
     async fetchAbout() {
       this.aboutLoading = true
@@ -624,36 +687,153 @@ export default {
 }
 
 /* Selected works */
-.selected-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+.selected-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #ebeef5;
 }
 
-@media (max-width: 900px) {
-  .selected-grid { grid-template-columns: repeat(2, 1fr); }
+.sw-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 34px;
+  color: #1a1a1a;
+  letter-spacing: 2px;
 }
-@media (max-width: 520px) {
-  .selected-grid { grid-template-columns: 1fr; }
+
+.shuffle-btn {
+  background: transparent;
+  color: #1a1a1a;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border: 1px solid #1a1a1a;
+  border-radius: 2px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.shuffle-btn:hover {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.sw-masonry {
+  column-count: 2;
+  column-gap: 24px;
+}
+
+@media (max-width: 640px) {
+  .sw-masonry { column-count: 1; }
 }
 
 .sw-item {
-  aspect-ratio: 1;
-  overflow: hidden;
+  break-inside: avoid;
+  margin-bottom: 24px;
   cursor: pointer;
-  background: #f5f7fa;
+  perspective: 1400px;
 }
 
-.sw-item img {
+.sw-card {
+  position: relative;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.6s;
+  transition: transform 0.75s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transform-style: preserve-3d;
 }
 
-.sw-item:hover img {
-  transform: scale(1.05);
+.sw-item.flipped .sw-card {
+  transform: rotateY(180deg);
 }
+
+.sw-face {
+  width: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.3s, transform 0.3s;
+}
+
+.sw-front img {
+  width: 100%;
+  display: block;
+  transition: transform 0.5s;
+}
+
+.sw-item:not(.flipped):hover .sw-face { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16); }
+.sw-item:not(.flipped):hover .sw-front img { transform: scale(1.03); }
+
+/* 背面 */
+.sw-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  min-height: 260px;
+  background: linear-gradient(135deg, #fafafa 0%, #ecf0f5 100%);
+  transform: rotateY(180deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+
+.sw-back-inner {
+  width: 100%;
+  text-align: center;
+}
+
+.sw-back-label {
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #909399;
+}
+
+.sw-back-collection {
+  margin-top: 6px;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 22px;
+  color: #1a1a1a;
+  font-style: italic;
+}
+
+.sw-back-divider {
+  width: 40px;
+  height: 1px;
+  background: #c0c4cc;
+  margin: 14px auto;
+}
+
+.sw-back-desc {
+  font-size: 14px;
+  color: #4a4a4a;
+  line-height: 1.7;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.sw-back-desc.muted { color: #a0a4ab; font-style: italic; }
+
+.sw-back-hint {
+  margin-top: 18px;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #a0a4ab;
+}
+
+/* 不规则圆角变体 */
+.sw-item.variant-0 .sw-face { border-radius: 4px; }
+.sw-item.variant-1 { transform: rotate(-0.35deg); }
+.sw-item.variant-1 .sw-face { border-radius: 10px 4px 10px 4px; }
+.sw-item.variant-2 { transform: rotate(0.35deg); }
+.sw-item.variant-2 .sw-face { border-radius: 4px 10px 4px 10px; }
+.sw-item.variant-3 .sw-face { border-radius: 8px; }
+.sw-item.variant-4 { transform: rotate(-0.2deg); }
+.sw-item.variant-4 .sw-face { border-radius: 6px; }
 
 /* Placeholder */
 .placeholder {
