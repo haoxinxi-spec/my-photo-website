@@ -1,0 +1,40 @@
+frontend/src/views/Login.vue
+  s_51df25f11fc8a6::t_28a7119da52508 146-158,162-164,167,169
+frontend/src/views/AdminAbout.vue
+  s_51df25f11fc8a6::t_8db1d86ff413f2 1-429
+backend/src/main/java/com/photowebsite/service/DataStore.java
+  s_51df25f11fc8a6::t_73b7d9c6c57fd5 205-229
+  s_51df25f11fc8a6::t_229be936303314 22,30-31
+  s_51df25f11fc8a6::t_23ce1fa6f8140d 39,47-56
+frontend/src/views/AdminCollections.vue
+  s_51df25f11fc8a6::t_856f601c4e19bf 203-205
+  s_51df25f11fc8a6::t_9a0d1ce123fbe7 12-14
+frontend/src/views/AdminCollectionDetail.vue
+  s_51df25f11fc8a6::t_ee6747cb7f0261 10
+  s_51df25f11fc8a6::t_07207c0130b4cb 258-260
+backend/src/main/java/com/photowebsite/controller/AboutController.java
+  s_51df25f11fc8a6::t_176260434a1630 1-118
+frontend/src/views/GuestGallery.vue
+  s_51df25f11fc8a6::t_cdd762040ad4fa 62-80
+  s_51df25f11fc8a6::t_2c09118b1becf2 157-159,173-176,181,189-203
+  s_51df25f11fc8a6::t_2edd68557fa4f8 489-555
+frontend/src/router/index.js
+  s_51df25f11fc8a6::t_07ae211931be1d 5
+  s_51df25f11fc8a6::t_eb12056b61594d 24-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.40-trip",
+  "base_commit_sha": "b804f17900c5885e93708e3aa0f337b4e33447c1",
+  "prompts": {},
+  "sessions": {
+    "s_51df25f11fc8a6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "df0087a4-e7d2-43a1-9a5f-82edcb794f16",
+        "model": "arn:aws:bedrock:us-west-2:466494951737:application-inference-profile/rf6www9ej5dq"
+      },
+      "human_author": "haoxinxi <haoxinxi@example.com>"
+    }
+  }
+}
