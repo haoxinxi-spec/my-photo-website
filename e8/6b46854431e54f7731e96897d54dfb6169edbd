@@ -1,0 +1,19 @@
+frontend/src/views/Home.vue
+  s_51df25f11fc8a6::t_4888ca3a2e462e 2,56,59,70-72,74-89,94-113,117-123,144-152,163,165-168,180-190,221,255-259,266-317,512,516-522,537-538,541,544,550,553-560,563-564,567-580,586-591,595-660,663,665-666,669,671-672,674-675,678-687,689-705,707-727,746-747,750-759,763-789
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.40-trip",
+  "base_commit_sha": "e86b46854431e54f7731e96897d54dfb6169edbd",
+  "prompts": {},
+  "sessions": {
+    "s_51df25f11fc8a6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "df0087a4-e7d2-43a1-9a5f-82edcb794f16",
+        "model": "arn:aws:bedrock:us-west-2:466494951737:application-inference-profile/rf6www9ej5dq"
+      },
+      "human_author": "haoxinxi <haoxinxi@example.com>"
+    }
+  }
+}
