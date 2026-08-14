@@ -1,0 +1,29 @@
+frontend/public/index.html
+  s_51df25f11fc8a6::t_4e62f979675b18 7
+backend/src/main/resources/application.properties
+  s_51df25f11fc8a6::t_e3835a9ebcd0fb 2-3
+backend/src/main/java/com/photowebsite/controller/PhotoController.java
+  s_51df25f11fc8a6::t_6d0d2654dd82bc 104
+  s_51df25f11fc8a6::t_22912191156fb3 7,19,21-23,27-33
+backend/src/main/java/com/photowebsite/config/WebConfig.java
+  s_51df25f11fc8a6::t_55982bc9c12c90 9-10,29,31
+frontend/src/views/Home.vue
+  s_51df25f11fc8a6::t_82e469c0d8ec85 147,158-163,166-172,181
+  s_51df25f11fc8a6::t_e0d3e4dff69d97 188
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.40-trip",
+  "base_commit_sha": "a23abf12c99613548ae5dee0b30629f4c935e810",
+  "prompts": {},
+  "sessions": {
+    "s_51df25f11fc8a6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "df0087a4-e7d2-43a1-9a5f-82edcb794f16",
+        "model": "arn:aws:bedrock:us-west-2:466494951737:application-inference-profile/rf6www9ej5dq"
+      },
+      "human_author": "haoxinxi <haoxinxi@example.com>"
+    }
+  }
+}
