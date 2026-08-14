@@ -70,23 +70,99 @@
             </div>
             <div v-else class="about-empty">No introduction yet.</div>
           </div>
-          <div class="about-image">
-            <img v-if="about.imageUrl" :src="about.imageUrl" alt="Haoxin Xia" />
-            <div v-else class="about-image-empty">No image</div>
+          <div class="about-image-column">
+            <div class="about-image">
+              <img v-if="about.imageUrl" :src="about.imageUrl" alt="Haoxin Xia" />
+              <div v-else class="about-image-empty">No image</div>
+            </div>
+            <div v-if="about.imageCaption" class="about-caption">{{ about.imageCaption }}</div>
           </div>
         </div>
       </section>
 
-      <!-- SHOP / NEWS / CONTACT: 占位页面 -->
+      <!-- NEWS: 三栏 -->
+      <section v-else-if="activeNav === 'news'" class="news-section">
+        <div class="news-top">
+          <div class="news-heading">
+            <div class="news-title">News</div>
+            <div class="news-subtitle">Updates, announcements and stories.</div>
+          </div>
+          <div class="news-search" v-click-outside="closeSuggest">
+            <div class="search-wrap">
+              <input
+                v-model="searchQuery"
+                type="text"
+                placeholder="Search articles..."
+                @input="onSearchInput"
+                @focus="onSearchFocus"
+              />
+              <span class="search-icon">⌕</span>
+            </div>
+            <transition name="fade">
+              <div v-if="showSuggest && (suggestions.length || searchQuery)" class="suggest">
+                <div v-if="suggestions.length === 0" class="suggest-empty">
+                  No matches for "{{ searchQuery }}"
+                </div>
+                <div
+                  v-for="s in suggestions"
+                  :key="s.id"
+                  class="suggest-item"
+                  @click="goDetail(s.id)"
+                >
+                  <div class="suggest-title" v-html="highlight(s.title)"></div>
+                  <div class="suggest-sub">{{ s.subtitle }}</div>
+                </div>
+              </div>
+            </transition>
+          </div>
+        </div>
+
+        <div class="news-grid">
+          <div class="news-main">
+            <div v-if="newsLoading" class="state">Loading...</div>
+            <div v-else-if="newsItems.length === 0" class="state">No articles yet.</div>
+            <article
+              v-for="n in newsItems"
+              :key="n.id"
+              class="news-card"
+            >
+              <div v-if="n.coverUrl" class="nc-cover">
+                <img :src="n.coverUrl" :alt="n.title" />
+              </div>
+              <div class="nc-body">
+                <h2 class="nc-title">{{ n.title }}</h2>
+                <div class="nc-sub">{{ n.subtitle || formatSubtitle(n) }}</div>
+                <p class="nc-summary">{{ n.summary || truncate(n.content, 220) }}</p>
+                <button class="learn-more" @click="goDetail(n.id)">Learn more →</button>
+              </div>
+            </article>
+          </div>
+
+          <aside class="news-aside">
+            <div class="aside-title">Hot News</div>
+            <div v-if="hotItems.length === 0" class="aside-empty">No hot articles.</div>
+            <div v-else class="aside-list">
+              <div
+                v-for="h in hotItems"
+                :key="h.id"
+                class="aside-item"
+                @click="goDetail(h.id)"
+              >
+                <div class="aside-item-title">{{ h.title }}</div>
+                <div class="aside-item-sub">{{ h.subtitle || formatSubtitle(h) }}</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- SHOP / CONTACT: 占位页面 -->
       <section v-else class="placeholder">
         <div class="ph-inner">
           <div class="ph-title">{{ currentNavLabel }}</div>
           <div class="ph-text">
             <template v-if="activeNav === 'shop'">
               Prints and merchandise coming soon.
-            </template>
-            <template v-else-if="activeNav === 'news'">
-              Latest updates and announcements will appear here.
             </template>
             <template v-else-if="activeNav === 'contact'">
               For inquiries or collaborations, please reach out via email.
@@ -155,8 +231,15 @@ export default {
       activeCollection: null,
       preview: null,
       displayName: localStorage.getItem('displayName') || 'Guest',
-      about: { text: '', imageUrl: null },
-      aboutLoading: false
+      about: { text: '', imageUrl: null, imageCaption: '' },
+      aboutLoading: false,
+      newsItems: [],
+      hotItems: [],
+      newsLoading: false,
+      searchQuery: '',
+      suggestions: [],
+      showSuggest: false,
+      searchDebounce: null
     }
   },
   computed: {
@@ -189,13 +272,20 @@ export default {
       if (key === 'about') {
         this.fetchAbout()
       }
+      if (key === 'news') {
+        this.fetchNews()
+      }
     },
     async fetchAbout() {
       this.aboutLoading = true
       try {
         const res = await axios.get('/api/about')
         if (res.data.success) {
-          this.about = { text: res.data.text || '', imageUrl: res.data.imageUrl || null }
+          this.about = {
+            text: res.data.text || '',
+            imageUrl: res.data.imageUrl || null,
+            imageCaption: res.data.imageCaption || ''
+          }
         }
       } catch (e) {
         console.error(e)
@@ -244,6 +334,85 @@ export default {
     logout() {
       localStorage.clear()
       this.$router.push('/login')
+    },
+    // News
+    async fetchNews() {
+      this.newsLoading = true
+      try {
+        const [listRes, hotRes] = await Promise.all([
+          axios.get('/api/news/list'),
+          axios.get('/api/news/hot')
+        ])
+        if (listRes.data.success) this.newsItems = listRes.data.items
+        if (hotRes.data.success) this.hotItems = hotRes.data.items
+      } catch (e) {
+        console.error(e)
+      } finally {
+        this.newsLoading = false
+      }
+    },
+    goDetail(id) {
+      this.showSuggest = false
+      this.$router.push(`/news/${id}`)
+    },
+    onSearchInput() {
+      if (this.searchDebounce) clearTimeout(this.searchDebounce)
+      this.searchDebounce = setTimeout(this.runSearch, 180)
+    },
+    onSearchFocus() {
+      if (this.searchQuery) this.runSearch()
+      else this.showSuggest = false
+    },
+    async runSearch() {
+      const q = this.searchQuery.trim()
+      if (!q) {
+        this.suggestions = []
+        this.showSuggest = false
+        return
+      }
+      try {
+        const res = await axios.get('/api/news/search', { params: { q } })
+        if (res.data.success) {
+          this.suggestions = res.data.items.slice(0, 8)
+          this.showSuggest = true
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    },
+    closeSuggest() {
+      this.showSuggest = false
+    },
+    highlight(text) {
+      if (!text || !this.searchQuery) return text
+      const q = this.searchQuery.trim()
+      if (!q) return text
+      const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      return text.replace(new RegExp(`(${escaped})`, 'ig'), '<mark>$1</mark>')
+    },
+    formatSubtitle(n) {
+      const d = n.publishedAt ? new Date(n.publishedAt) : null
+      const date = d ? d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : ''
+      return [date, n.location].filter(Boolean).join(' · ')
+    },
+    truncate(text, len) {
+      if (!text) return ''
+      return text.length > len ? text.slice(0, len) + '...' : text
+    }
+  },
+  directives: {
+    'click-outside': {
+      mounted(el, binding) {
+        el.__clickOutside = (event) => {
+          if (!(el === event.target || el.contains(event.target))) {
+            binding.value(event)
+          }
+        }
+        document.addEventListener('click', el.__clickOutside)
+      },
+      unmounted(el) {
+        document.removeEventListener('click', el.__clickOutside)
+      }
     }
   }
 }
@@ -495,7 +664,7 @@ export default {
   max-width: 1100px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.6fr 1fr;
   gap: 60px;
   align-items: center;
 }
@@ -527,8 +696,15 @@ export default {
   font-size: 14px;
 }
 
+.about-image-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .about-image {
-  width: 100%;
+  width: 280px;
+  max-width: 100%;
   aspect-ratio: 3 / 4;
   background: #f5f7fa;
   overflow: hidden;
@@ -551,6 +727,16 @@ export default {
   font-size: 13px;
   letter-spacing: 2px;
   text-transform: uppercase;
+}
+
+.about-caption {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #909399;
+  font-style: italic;
+  text-align: center;
+  line-height: 1.5;
+  max-width: 280px;
 }
 
 /* Collection view */
@@ -689,5 +875,263 @@ export default {
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+}
+
+/* News */
+.news-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 0 40px;
+}
+
+.news-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #ebeef5;
+  margin-bottom: 32px;
+  gap: 24px;
+}
+
+.news-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 40px;
+  color: #1a1a1a;
+  letter-spacing: 2px;
+}
+
+.news-subtitle {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #909399;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.news-search {
+  position: relative;
+  width: 320px;
+  max-width: 40%;
+}
+
+.search-wrap {
+  position: relative;
+}
+
+.news-search input {
+  width: 100%;
+  padding: 10px 36px 10px 14px;
+  border: 1px solid #dcdfe6;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 13px;
+  background: #fff;
+}
+
+.news-search input:focus {
+  outline: none;
+  border-color: #1a1a1a;
+}
+
+.search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #909399;
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.suggest {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  z-index: 40;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.suggest-empty {
+  padding: 14px 16px;
+  color: #909399;
+  font-size: 13px;
+}
+
+.suggest-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #f5f7fa;
+  transition: background 0.15s;
+}
+
+.suggest-item:last-child { border-bottom: none; }
+
+.suggest-item:hover {
+  background: #fafafa;
+}
+
+.suggest-title {
+  font-size: 14px;
+  color: #1a1a1a;
+  font-weight: 500;
+}
+
+.suggest-title :deep(mark) {
+  background: #ffe58f;
+  color: #1a1a1a;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+.suggest-sub {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.news-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .news-grid { grid-template-columns: 1fr; gap: 32px; }
+  .news-search { width: 100%; max-width: 100%; }
+  .news-top { flex-direction: column; align-items: stretch; }
+}
+
+.news-main {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.news-card {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.news-card:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.nc-cover {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #f5f7fa;
+}
+
+.nc-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.nc-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.25;
+  margin-bottom: 6px;
+}
+
+.nc-sub {
+  font-size: 12px;
+  color: #a0a4ab;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.nc-summary {
+  font-size: 15px;
+  color: #4a4a4a;
+  line-height: 1.75;
+  margin-bottom: 12px;
+}
+
+.learn-more {
+  background: transparent;
+  color: #1a1a1a;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 6px 0;
+  border-bottom: 1px solid #1a1a1a;
+  border-radius: 0;
+  transition: opacity 0.2s;
+}
+
+.learn-more:hover { opacity: 0.6; }
+
+.news-aside {
+  position: sticky;
+  top: 100px;
+  padding: 20px 20px 24px;
+  background: #fafafa;
+  border-radius: 3px;
+}
+
+.aside-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 22px;
+  color: #1a1a1a;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ebeef5;
+  margin-bottom: 14px;
+}
+
+.aside-empty {
+  color: #909399;
+  font-size: 13px;
+}
+
+.aside-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.aside-item {
+  cursor: pointer;
+  padding: 8px 0;
+  border-bottom: 1px dashed #ebeef5;
+  transition: transform 0.15s;
+}
+
+.aside-item:last-child { border-bottom: none; }
+
+.aside-item:hover {
+  transform: translateX(3px);
+}
+
+.aside-item-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 17px;
+  color: #1a1a1a;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.aside-item-sub {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #a0a4ab;
+  letter-spacing: 0.5px;
 }
 </style>

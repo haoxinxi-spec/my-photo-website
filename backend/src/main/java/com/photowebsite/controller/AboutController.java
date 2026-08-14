@@ -44,6 +44,7 @@ public class AboutController {
         response.put("text", about.get("text"));
         String img = dataStore.getAboutImageFilename();
         response.put("imageUrl", img != null ? "/uploads/" + img : null);
+        response.put("imageCaption", dataStore.getAboutImageCaption());
         return response;
     }
 
@@ -57,6 +58,20 @@ public class AboutController {
             return response;
         }
         dataStore.updateAboutText(body.get("text"));
+        response.put("success", true);
+        return response;
+    }
+
+    @PutMapping("/caption")
+    public Map<String, Object> updateCaption(@RequestBody Map<String, String> body,
+                                              @RequestHeader(value = "Authorization", required = false) String token) throws IOException {
+        Map<String, Object> response = new HashMap<>();
+        if (!isAdmin(token)) {
+            response.put("success", false);
+            response.put("message", "Admin required");
+            return response;
+        }
+        dataStore.updateAboutImageCaption(body.get("caption"));
         response.put("success", true);
         return response;
     }

@@ -8,6 +8,7 @@
       <nav class="nav">
         <router-link to="/admin" class="nav-link" exact-active-class="active">Collections</router-link>
         <router-link to="/admin/about" class="nav-link" exact-active-class="active">About</router-link>
+        <router-link to="/admin/news" class="nav-link" exact-active-class="active">News</router-link>
         <router-link to="/admin/appearance" class="nav-link" exact-active-class="active">Appearance</router-link>
       </nav>
       <div class="sidebar-footer">
@@ -58,7 +59,23 @@
           <img v-if="imageUrl" :src="imageUrl" alt="About portrait" />
           <div v-else class="image-empty">No image uploaded</div>
         </div>
-        <p class="hint">This image is displayed on the right side of the About section on the guest gallery.</p>
+        <p class="hint">Portrait shown on the right side of the About section.</p>
+
+        <div class="caption-row">
+          <label>Image Caption</label>
+          <input
+            v-model="imageCaption"
+            type="text"
+            placeholder="e.g. Lugu Lake, Yunnan, 2024"
+          />
+          <div class="row-actions">
+            <span v-if="captionStatus" class="status" :class="captionStatus.type">{{ captionStatus.msg }}</span>
+            <button class="btn-primary" :disabled="savingCaption" @click="saveCaption">
+              {{ savingCaption ? 'Saving...' : 'Save Caption' }}
+            </button>
+          </div>
+          <p class="hint">The caption appears in italics below the image on the guest gallery.</p>
+        </div>
       </section>
     </main>
   </div>
@@ -73,9 +90,12 @@ export default {
     return {
       text: '',
       imageUrl: null,
+      imageCaption: '',
       savingText: false,
+      savingCaption: false,
       uploading: false,
       textStatus: null,
+      captionStatus: null,
       displayName: localStorage.getItem('displayName') || 'Admin',
       role: localStorage.getItem('role') || 'admin'
     }
@@ -90,6 +110,7 @@ export default {
         if (res.data.success) {
           this.text = res.data.text || ''
           this.imageUrl = res.data.imageUrl || null
+          this.imageCaption = res.data.imageCaption || ''
         }
       } catch (e) {
         console.error(e)
@@ -113,6 +134,26 @@ export default {
       } finally {
         this.savingText = false
         setTimeout(() => { this.textStatus = null }, 3000)
+      }
+    },
+    async saveCaption() {
+      const token = localStorage.getItem('token')
+      this.savingCaption = true
+      this.captionStatus = null
+      try {
+        const res = await axios.put('/api/about/caption', { caption: this.imageCaption }, {
+          headers: { Authorization: token }
+        })
+        if (res.data.success) {
+          this.captionStatus = { type: 'ok', msg: 'Saved' }
+        } else {
+          this.captionStatus = { type: 'error', msg: res.data.message || 'Save failed' }
+        }
+      } catch (e) {
+        this.captionStatus = { type: 'error', msg: 'Network error' }
+      } finally {
+        this.savingCaption = false
+        setTimeout(() => { this.captionStatus = null }, 3000)
       }
     },
     async handleImageUpload(event) {
@@ -426,5 +467,35 @@ export default {
   margin-top: 10px;
   font-size: 12px;
   color: #909399;
+}
+
+.caption-row {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #ebeef5;
+}
+
+.caption-row label {
+  display: block;
+  font-size: 11px;
+  color: #606266;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.caption-row input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #2c3e50;
+}
+
+.caption-row input:focus {
+  outline: none;
+  border-color: #1a1a1a;
 }
 </style>

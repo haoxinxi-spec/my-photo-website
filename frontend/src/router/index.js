@@ -4,7 +4,9 @@ import AdminCollections from '../views/AdminCollections.vue'
 import AdminCollectionDetail from '../views/AdminCollectionDetail.vue'
 import AdminAbout from '../views/AdminAbout.vue'
 import AdminAppearance from '../views/AdminAppearance.vue'
+import AdminNews from '../views/AdminNews.vue'
 import GuestGallery from '../views/GuestGallery.vue'
+import NewsDetail from '../views/NewsDetail.vue'
 
 const routes = [
   { path: '/', redirect: '/login' },
@@ -34,9 +36,21 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
+    path: '/admin/news',
+    name: 'AdminNews',
+    component: AdminNews,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
     path: '/gallery',
     name: 'GuestGallery',
     component: GuestGallery,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/news/:id',
+    name: 'NewsDetail',
+    component: NewsDetail,
     meta: { requiresAuth: true }
   }
 ]

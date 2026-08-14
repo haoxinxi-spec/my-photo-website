@@ -8,6 +8,7 @@
       <nav class="nav">
         <router-link to="/admin" class="nav-link" exact-active-class="active">Collections</router-link>
         <router-link to="/admin/about" class="nav-link" exact-active-class="active">About</router-link>
+        <router-link to="/admin/news" class="nav-link" exact-active-class="active">News</router-link>
         <router-link to="/admin/appearance" class="nav-link" exact-active-class="active">Appearance</router-link>
       </nav>
       <div class="sidebar-footer">
