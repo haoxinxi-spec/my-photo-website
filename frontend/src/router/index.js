@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import Login from '../views/Login.vue'
 import AdminCollections from '../views/AdminCollections.vue'
 import AdminCollectionDetail from '../views/AdminCollectionDetail.vue'
+import AdminAbout from '../views/AdminAbout.vue'
 import GuestGallery from '../views/GuestGallery.vue'
 
 const routes = [
@@ -17,6 +18,12 @@ const routes = [
     path: '/admin/collections/:id',
     name: 'AdminCollectionDetail',
     component: AdminCollectionDetail,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/about',
+    name: 'AdminAbout',
+    component: AdminAbout,
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {

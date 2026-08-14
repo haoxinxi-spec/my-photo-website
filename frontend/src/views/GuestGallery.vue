@@ -59,7 +59,25 @@
         </div>
       </section>
 
-      <!-- SHOP / NEWS / ABOUT / CONTACT: 占位页面 -->
+      <!-- ABOUT: 左文字 + 右图片 -->
+      <section v-else-if="activeNav === 'about'" class="about-section">
+        <div v-if="aboutLoading" class="state">Loading...</div>
+        <div v-else class="about-inner">
+          <div class="about-text">
+            <div class="about-title">About</div>
+            <div class="about-body" v-if="about.text">
+              <p v-for="(line, i) in aboutParagraphs" :key="i">{{ line }}</p>
+            </div>
+            <div v-else class="about-empty">No introduction yet.</div>
+          </div>
+          <div class="about-image">
+            <img v-if="about.imageUrl" :src="about.imageUrl" alt="Haoxin Xia" />
+            <div v-else class="about-image-empty">No image</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SHOP / NEWS / CONTACT: 占位页面 -->
       <section v-else class="placeholder">
         <div class="ph-inner">
           <div class="ph-title">{{ currentNavLabel }}</div>
@@ -69,9 +87,6 @@
             </template>
             <template v-else-if="activeNav === 'news'">
               Latest updates and announcements will appear here.
-            </template>
-            <template v-else-if="activeNav === 'about'">
-              I'm Haoxin Xia — a photographer capturing quiet moments between light and shadow. This site is a personal archive of the images I keep returning to.
             </template>
             <template v-else-if="activeNav === 'contact'">
               For inquiries or collaborations, please reach out via email.
@@ -139,7 +154,9 @@ export default {
       loading: false,
       activeCollection: null,
       preview: null,
-      displayName: localStorage.getItem('displayName') || 'Guest'
+      displayName: localStorage.getItem('displayName') || 'Guest',
+      about: { text: '', imageUrl: null },
+      aboutLoading: false
     }
   },
   computed: {
@@ -153,16 +170,37 @@ export default {
         for (const p of (c.photos || [])) list.push(p)
       }
       return list
+    },
+    aboutParagraphs() {
+      if (!this.about.text) return []
+      return this.about.text.split(/\n+/).map(s => s.trim()).filter(Boolean)
     }
   },
   mounted() {
     this.fetchCollections()
+    this.fetchAbout()
   },
   methods: {
     setActive(key) {
       this.activeNav = key
       if (key === 'selected' && this.collectionsDetailed.length === 0) {
         this.fetchAllDetails()
+      }
+      if (key === 'about') {
+        this.fetchAbout()
+      }
+    },
+    async fetchAbout() {
+      this.aboutLoading = true
+      try {
+        const res = await axios.get('/api/about')
+        if (res.data.success) {
+          this.about = { text: res.data.text || '', imageUrl: res.data.imageUrl || null }
+        }
+      } catch (e) {
+        console.error(e)
+      } finally {
+        this.aboutLoading = false
       }
     },
     async fetchCollections() {
@@ -446,6 +484,73 @@ export default {
   font-size: 15px;
   color: #606266;
   line-height: 1.8;
+}
+
+/* About section */
+.about-section {
+  padding: 60px 0;
+}
+
+.about-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+@media (max-width: 780px) {
+  .about-inner {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
+.about-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 42px;
+  color: #1a1a1a;
+  margin-bottom: 24px;
+  letter-spacing: 2px;
+}
+
+.about-body p {
+  font-size: 15px;
+  color: #4a4a4a;
+  line-height: 1.85;
+  margin-bottom: 14px;
+}
+
+.about-empty {
+  color: #909399;
+  font-size: 14px;
+}
+
+.about-image {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: #f5f7fa;
+  overflow: hidden;
+}
+
+.about-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.about-image-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c0c4cc;
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
 }
 
 /* Collection view */

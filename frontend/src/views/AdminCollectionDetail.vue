@@ -7,6 +7,7 @@
       </div>
       <nav class="nav">
         <router-link to="/admin" class="nav-link">Collections</router-link>
+        <router-link to="/admin/about" class="nav-link">About</router-link>
       </nav>
       <div class="sidebar-footer">
         <div class="user-info">
@@ -254,6 +255,9 @@ export default {
 .nav {
   margin-top: 32px;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .nav-link {

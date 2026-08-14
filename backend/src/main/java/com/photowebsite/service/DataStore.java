@@ -19,6 +19,7 @@ public class DataStore {
     private File dataDir;
     private File usersFile;
     private File collectionsFile;
+    private File aboutFile;
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -26,6 +27,8 @@ public class DataStore {
     private Map<String, Map<String, String>> users = new LinkedHashMap<>();
     // collections: id -> { id, title, description, coverFilename, createdAt, photos:[{filename,description,uploadedAt}] }
     private List<Map<String, Object>> collections = new ArrayList<>();
+    // about: { text, imageFilename }
+    private Map<String, Object> about = new LinkedHashMap<>();
 
     @PostConstruct
     public synchronized void init() throws IOException {
@@ -33,6 +36,7 @@ public class DataStore {
         if (!dataDir.exists()) dataDir.mkdirs();
         usersFile = new File(dataDir, "users.json");
         collectionsFile = new File(dataDir, "collections.json");
+        aboutFile = new File(dataDir, "about.json");
 
         if (usersFile.exists()) {
             users = mapper.readValue(usersFile, new TypeReference<Map<String, Map<String, String>>>() {});
@@ -40,6 +44,16 @@ public class DataStore {
         if (collectionsFile.exists()) {
             collections = mapper.readValue(collectionsFile, new TypeReference<List<Map<String, Object>>>() {});
         }
+        if (aboutFile.exists()) {
+            about = mapper.readValue(aboutFile, new TypeReference<Map<String, Object>>() {});
+        }
+        if (!about.containsKey("text")) {
+            about.put("text", "I'm Haoxin Xia — a photographer capturing quiet moments between light and shadow. This site is a personal archive of the images I keep returning to.");
+        }
+        if (!about.containsKey("imageFilename")) {
+            about.put("imageFilename", null);
+        }
+        saveAbout();
 
         // 保证默认账号存在
         if (!users.containsKey("admin")) {
@@ -187,5 +201,30 @@ public class DataStore {
 
     public synchronized void saveCollections() throws IOException {
         mapper.writerWithDefaultPrettyPrinter().writeValue(collectionsFile, collections);
+    }
+
+    // ---------------- About ----------------
+
+    public synchronized Map<String, Object> getAbout() {
+        return about;
+    }
+
+    public synchronized void updateAboutText(String text) throws IOException {
+        about.put("text", text == null ? "" : text);
+        saveAbout();
+    }
+
+    public synchronized void setAboutImage(String filename) throws IOException {
+        about.put("imageFilename", filename);
+        saveAbout();
+    }
+
+    public synchronized String getAboutImageFilename() {
+        Object v = about.get("imageFilename");
+        return v == null ? null : String.valueOf(v);
+    }
+
+    public synchronized void saveAbout() throws IOException {
+        mapper.writerWithDefaultPrettyPrinter().writeValue(aboutFile, about);
     }
 }

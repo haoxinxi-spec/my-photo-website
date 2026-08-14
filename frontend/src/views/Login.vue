@@ -142,17 +142,31 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #f4f5f7;
   padding: 20px;
+  background-image: url('/login-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+.login-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  pointer-events: none;
 }
 
 .login-box {
-  background: #fff;
+  position: relative;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
   padding: 48px 40px;
   border-radius: 6px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
   width: 420px;
-  border: 1px solid #ebeef5;
+  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 .brand {
