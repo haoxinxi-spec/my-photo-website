@@ -1,0 +1,53 @@
+frontend/src/views/AdminCollections.vue
+  s_51df25f11fc8a6::t_e3b9ace1aa05f2 15-17
+backend/src/main/java/com/photowebsite/controller/NewsController.java
+  s_51df25f11fc8a6::t_ebef0cad1f63fb 1-198
+frontend/src/views/AdminNews.vue
+  s_51df25f11fc8a6::t_e3e00065fabefb 1-580
+frontend/src/views/AdminCollectionDetail.vue
+  s_51df25f11fc8a6::t_c229b20de4068f 11
+frontend/src/views/AdminAppearance.vue
+  s_51df25f11fc8a6::t_7ae679181d7ae4 11
+backend/src/main/java/com/photowebsite/controller/AboutController.java
+  s_51df25f11fc8a6::t_97ced5395d1cd2 47,65-74
+frontend/src/views/AdminAbout.vue
+  s_51df25f11fc8a6::t_5a1a2d36619179 471-500
+  s_51df25f11fc8a6::t_050018a5d32499 11
+  s_51df25f11fc8a6::t_e09a018499c7f5 62-78
+  s_51df25f11fc8a6::t_6ae01106db421c 93,95,98,113,139-156
+frontend/src/views/NewsDetail.vue
+  s_51df25f11fc8a6::t_07d7f2db9c7d2c 1-228
+frontend/src/views/GuestGallery.vue
+  s_51df25f11fc8a6::t_ca22d3d354091b 73-78
+  s_51df25f11fc8a6::t_232539468c6859 284-288
+  s_51df25f11fc8a6::t_e7682ec3eeb678 879-1136
+  s_51df25f11fc8a6::t_1fee3c488c0cc3 234
+  s_51df25f11fc8a6::t_d76424179d9009 337-415
+  s_51df25f11fc8a6::t_69b0846eeba9bd 83-116,119-156,159
+  s_51df25f11fc8a6::t_75ca87384ca293 235-242,275-276
+  s_51df25f11fc8a6::t_14d1fb3794a3be 667,699-704,706-707,732-739
+backend/src/main/java/com/photowebsite/service/DataStore.java
+  s_51df25f11fc8a6::t_2ceef25df8d1bb 24,30,32,34,36-37
+  s_51df25f11fc8a6::t_9f191f96c884b7 239-248
+  s_51df25f11fc8a6::t_7091dbf3585d08 273-390
+  s_51df25f11fc8a6::t_736bccf02803c3 47,61-63,67-70,73
+frontend/src/router/index.js
+  s_51df25f11fc8a6::t_219cc35c1b8c0c 39-43,49-53
+  s_51df25f11fc8a6::t_24e5e320ca6a99 7,9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.40-trip",
+  "base_commit_sha": "7b7a6aa3d5bb7fa16639e7ab5210968e9b1c5135",
+  "prompts": {},
+  "sessions": {
+    "s_51df25f11fc8a6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "df0087a4-e7d2-43a1-9a5f-82edcb794f16",
+        "model": "arn:aws:bedrock:us-west-2:466494951737:application-inference-profile/rf6www9ej5dq"
+      },
+      "human_author": "haoxinxi <haoxinxi@example.com>"
+    }
+  }
+}
