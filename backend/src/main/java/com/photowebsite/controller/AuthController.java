@@ -1,7 +1,10 @@
 package com.photowebsite.controller;
 
+import com.photowebsite.service.DataStore;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -9,9 +12,8 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private static final String ADMIN_USERNAME = "admin";
-    private static final String ADMIN_PASSWORD = "Bblvd77121";
-    private static final String TOKEN = "photo-website-token-2026";
+    @Autowired
+    private DataStore dataStore;
 
     @PostMapping("/login")
     public Map<String, Object> login(@RequestBody Map<String, String> credentials) {
@@ -19,25 +21,59 @@ public class AuthController {
         String username = credentials.get("username");
         String password = credentials.get("password");
 
-        if (ADMIN_USERNAME.equals(username) && ADMIN_PASSWORD.equals(password)) {
+        Map<String, String> user = dataStore.findUser(username);
+        if (user != null && user.get("password").equals(password)) {
             response.put("success", true);
-            response.put("token", TOKEN);
+            response.put("token", user.get("token"));
             response.put("username", username);
-            response.put("message", "登录成功");
+            response.put("displayName", user.get("displayName"));
+            response.put("role", user.get("role"));
         } else {
             response.put("success", false);
-            response.put("message", "用户名或密码错误");
+            response.put("message", "Invalid username or password");
         }
         return response;
     }
 
-    @PostMapping("/verify")
-    public Map<String, Object> verify(@RequestHeader(value = "Authorization", required = false) String token) {
+    @PostMapping("/register")
+    public Map<String, Object> register(@RequestBody Map<String, String> body) throws IOException {
         Map<String, Object> response = new HashMap<>();
-        if (TOKEN.equals(token)) {
-            response.put("valid", true);
-        } else {
+        String username = body.get("username");
+        String password = body.get("password");
+        String displayName = body.get("displayName");
+
+        if (username == null || username.trim().isEmpty() || password == null || password.length() < 4) {
+            response.put("success", false);
+            response.put("message", "Username required and password must be at least 4 characters");
+            return response;
+        }
+
+        boolean ok = dataStore.registerUser(username.trim(), password, displayName);
+        if (!ok) {
+            response.put("success", false);
+            response.put("message", "Username already exists");
+            return response;
+        }
+
+        Map<String, String> user = dataStore.findUser(username.trim());
+        response.put("success", true);
+        response.put("token", user.get("token"));
+        response.put("username", username.trim());
+        response.put("displayName", user.get("displayName"));
+        response.put("role", user.get("role"));
+        return response;
+    }
+
+    @GetMapping("/me")
+    public Map<String, Object> me(@RequestHeader(value = "Authorization", required = false) String token) {
+        Map<String, Object> response = new HashMap<>();
+        Map<String, String> user = dataStore.findUserByToken(token);
+        if (user == null) {
             response.put("valid", false);
+        } else {
+            response.put("valid", true);
+            response.put("role", user.get("role"));
+            response.put("displayName", user.get("displayName"));
         }
         return response;
     }

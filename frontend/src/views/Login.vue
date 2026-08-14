@@ -1,34 +1,62 @@
 <template>
   <div class="login-container">
     <div class="login-box">
-      <div class="avatar-circle">
-        <span>👤</span>
+      <div class="brand">
+        <div class="brand-name">Haoxin Xia</div>
+        <div class="brand-sub">Photography</div>
       </div>
-      <h2>欢迎登录</h2>
-      <p class="subtitle">我的照片站</p>
-      <form @submit.prevent="handleLogin">
+
+      <div class="tabs">
+        <button
+          class="tab"
+          :class="{ active: mode === 'login' }"
+          @click="mode = 'login'"
+        >Sign In</button>
+        <button
+          class="tab"
+          :class="{ active: mode === 'register' }"
+          @click="mode = 'register'"
+        >Register</button>
+      </div>
+
+      <form v-if="mode === 'login'" @submit.prevent="handleLogin" class="form">
         <div class="form-group">
-          <label>用户名</label>
-          <input
-            v-model="username"
-            type="text"
-            placeholder="请输入用户名"
-            required
-          />
+          <label>Username</label>
+          <input v-model="username" type="text" placeholder="Enter username" required />
         </div>
         <div class="form-group">
-          <label>密码</label>
-          <input
-            v-model="password"
-            type="password"
-            placeholder="请输入密码"
-            required
-          />
+          <label>Password</label>
+          <input v-model="password" type="password" placeholder="Enter password" required />
         </div>
         <div v-if="errorMsg" class="error">{{ errorMsg }}</div>
-        <button type="submit" class="login-btn" :disabled="loading">
-          {{ loading ? '登录中...' : '登 录' }}
+        <button type="submit" class="submit-btn" :disabled="loading">
+          {{ loading ? 'Signing in...' : 'Sign In' }}
         </button>
+        <div class="hint-line">
+          Admin: <code>admin</code> · Guest: <code>guest / 123456</code>
+        </div>
+      </form>
+
+      <form v-else @submit.prevent="handleRegister" class="form">
+        <div class="form-group">
+          <label>Username</label>
+          <input v-model="regUsername" type="text" placeholder="Choose a username" required />
+        </div>
+        <div class="form-group">
+          <label>Display Name (optional)</label>
+          <input v-model="regDisplayName" type="text" placeholder="How should we call you?" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input v-model="regPassword" type="password" placeholder="At least 4 characters" required />
+        </div>
+        <div v-if="errorMsg" class="error">{{ errorMsg }}</div>
+        <button type="submit" class="submit-btn" :disabled="loading">
+          {{ loading ? 'Creating...' : 'Create Account' }}
+        </button>
+        <div class="hint-line">
+          New accounts have guest access.
+        </div>
       </form>
     </div>
   </div>
@@ -41,13 +69,28 @@ export default {
   name: 'LoginView',
   data() {
     return {
+      mode: 'login',
       username: '',
       password: '',
+      regUsername: '',
+      regPassword: '',
+      regDisplayName: '',
       errorMsg: '',
       loading: false
     }
   },
+  watch: {
+    mode() {
+      this.errorMsg = ''
+    }
+  },
   methods: {
+    saveSession(data) {
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('username', data.username)
+      localStorage.setItem('displayName', data.displayName || data.username)
+      localStorage.setItem('role', data.role || 'guest')
+    },
     async handleLogin() {
       this.errorMsg = ''
       this.loading = true
@@ -57,14 +100,34 @@ export default {
           password: this.password
         })
         if (res.data.success) {
-          localStorage.setItem('token', res.data.token)
-          localStorage.setItem('username', res.data.username)
-          this.$router.push('/home')
+          this.saveSession(res.data)
+          this.$router.push(res.data.role === 'admin' ? '/admin' : '/gallery')
         } else {
-          this.errorMsg = res.data.message || '登录失败'
+          this.errorMsg = res.data.message || 'Login failed'
         }
       } catch (err) {
-        this.errorMsg = '网络错误，请检查后端服务'
+        this.errorMsg = 'Network error. Please make sure the backend is running.'
+      } finally {
+        this.loading = false
+      }
+    },
+    async handleRegister() {
+      this.errorMsg = ''
+      this.loading = true
+      try {
+        const res = await axios.post('/api/auth/register', {
+          username: this.regUsername,
+          password: this.regPassword,
+          displayName: this.regDisplayName
+        })
+        if (res.data.success) {
+          this.saveSession(res.data)
+          this.$router.push('/gallery')
+        } else {
+          this.errorMsg = res.data.message || 'Registration failed'
+        }
+      } catch (err) {
+        this.errorMsg = 'Network error. Please make sure the backend is running.'
       } finally {
         this.loading = false
       }
@@ -79,92 +142,131 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f4f5f7;
+  padding: 20px;
 }
 
 .login-box {
   background: #fff;
   padding: 48px 40px;
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-  width: 400px;
+  border-radius: 6px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
+  width: 420px;
+  border: 1px solid #ebeef5;
+}
+
+.brand {
   text-align: center;
+  margin-bottom: 28px;
 }
 
-.avatar-circle {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  margin: 0 auto 20px;
+.brand-name {
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  font-size: 32px;
+  color: #1a1a1a;
+  letter-spacing: 1px;
+  font-weight: 500;
+}
+
+.brand-sub {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 11px;
+  color: #8a8a8a;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.tabs {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 36px;
-  color: #fff;
+  gap: 4px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #ebeef5;
 }
 
-h2 {
-  color: #2c3e50;
-  margin-bottom: 8px;
-  font-size: 24px;
-}
-
-.subtitle {
+.tab {
+  flex: 1;
+  padding: 10px 0;
+  background: transparent;
   color: #909399;
-  margin-bottom: 32px;
-  font-size: 14px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.tab.active {
+  color: #1a1a1a;
+  border-bottom-color: #1a1a1a;
 }
 
 .form-group {
-  margin-bottom: 20px;
-  text-align: left;
+  margin-bottom: 18px;
 }
 
 .form-group label {
   display: block;
+  font-size: 11px;
   color: #606266;
-  margin-bottom: 8px;
-  font-size: 14px;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 .form-group input {
   width: 100%;
-  padding: 12px 16px;
+  padding: 10px 12px;
   border: 1px solid #dcdfe6;
-  border-radius: 10px;
+  border-radius: 4px;
   font-size: 14px;
   transition: border-color 0.2s;
 }
 
 .form-group input:focus {
-  border-color: #667eea;
+  outline: none;
+  border-color: #1a1a1a;
 }
 
 .error {
   color: #f56c6c;
   font-size: 13px;
-  margin-bottom: 16px;
-  text-align: left;
+  margin-bottom: 12px;
 }
 
-.login-btn {
+.submit-btn {
   width: 100%;
   padding: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #1a1a1a;
   color: #fff;
-  border-radius: 10px;
-  font-size: 16px;
-  font-weight: 500;
-  transition: opacity 0.2s;
+  border-radius: 4px;
+  font-size: 12px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  transition: background 0.2s;
 }
 
-.login-btn:hover:not(:disabled) {
-  opacity: 0.9;
+.submit-btn:hover:not(:disabled) {
+  background: #333;
 }
 
-.login-btn:disabled {
-  opacity: 0.6;
+.submit-btn:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+.hint-line {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: #a0a4ab;
+}
+
+code {
+  background: #f4f5f7;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  color: #606266;
 }
 </style>

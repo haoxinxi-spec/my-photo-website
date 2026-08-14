@@ -33,5 +33,8 @@ Thumbs.db
 backend/uploads/*
 !backend/uploads/.gitkeep
 
+# Data folder (JSON persistence)
+backend/data/
+
 # Logs
 *.log

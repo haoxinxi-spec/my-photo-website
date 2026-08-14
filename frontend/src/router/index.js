@@ -1,11 +1,30 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import Login from '../views/Login.vue'
-import Home from '../views/Home.vue'
+import AdminCollections from '../views/AdminCollections.vue'
+import AdminCollectionDetail from '../views/AdminCollectionDetail.vue'
+import GuestGallery from '../views/GuestGallery.vue'
 
 const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', name: 'Login', component: Login },
-  { path: '/home', name: 'Home', component: Home, meta: { requiresAuth: true } }
+  {
+    path: '/admin',
+    name: 'AdminCollections',
+    component: AdminCollections,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/collections/:id',
+    name: 'AdminCollectionDetail',
+    component: AdminCollectionDetail,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/gallery',
+    name: 'GuestGallery',
+    component: GuestGallery,
+    meta: { requiresAuth: true }
+  }
 ]
 
 const router = createRouter({
@@ -15,11 +34,15 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
+  const role = localStorage.getItem('role')
+
   if (to.meta.requiresAuth && !token) {
-    next('/login')
-  } else {
-    next()
+    return next('/login')
   }
+  if (to.meta.requiresAdmin && role !== 'admin') {
+    return next('/gallery')
+  }
+  next()
 })
 
 export default router
