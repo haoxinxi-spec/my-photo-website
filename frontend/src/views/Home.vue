@@ -144,6 +144,7 @@ export default {
 
       let successCount = 0
       let failCount = 0
+      let lastError = ''
 
       for (const file of files) {
         const formData = new FormData()
@@ -151,14 +152,24 @@ export default {
         try {
           const res = await axios.post('/api/photos/upload', formData, {
             headers: {
-              'Content-Type': 'multipart/form-data',
               Authorization: token
             }
           })
-          if (res.data.success) successCount++
-          else failCount++
+          if (res.data.success) {
+            successCount++
+          } else {
+            failCount++
+            lastError = res.data.message || '未知错误'
+          }
         } catch (e) {
           failCount++
+          if (e.response) {
+            lastError = `HTTP ${e.response.status}: ${e.response.data && e.response.data.message ? e.response.data.message : e.response.statusText}`
+          } else if (e.request) {
+            lastError = '后端无响应，请检查后端是否启动 (localhost:8080)'
+          } else {
+            lastError = e.message
+          }
         }
       }
 
@@ -167,14 +178,14 @@ export default {
         this.uploadMsg = `成功上传 ${successCount} 张图片`
       } else {
         this.uploadError = true
-        this.uploadMsg = `成功 ${successCount} 张，失败 ${failCount} 张`
+        this.uploadMsg = `成功 ${successCount} 张，失败 ${failCount} 张（${lastError}）`
       }
       event.target.value = ''
       this.fetchPhotos()
 
       setTimeout(() => {
         this.uploadMsg = ''
-      }, 3000)
+      }, this.uploadError ? 8000 : 3000)
     },
     openPreview(photo) {
       this.preview = photo

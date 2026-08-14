@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -15,15 +16,21 @@ public class PhotoController {
     @Value("${upload.path}")
     private String uploadPath;
 
+    private File uploadDir;
+
+    @PostConstruct
+    public void init() {
+        uploadDir = new File(uploadPath).getAbsoluteFile();
+        if (!uploadDir.exists()) {
+            uploadDir.mkdirs();
+        }
+        System.out.println("[PhotoController] Upload directory resolved to: " + uploadDir.getAbsolutePath());
+    }
+
     @GetMapping("/list")
     public Map<String, Object> listPhotos() {
         Map<String, Object> response = new HashMap<>();
         List<Map<String, String>> photos = new ArrayList<>();
-
-        File uploadDir = new File(uploadPath);
-        if (!uploadDir.exists()) {
-            uploadDir.mkdirs();
-        }
 
         File[] files = uploadDir.listFiles();
         if (files != null) {
@@ -61,11 +68,6 @@ public class PhotoController {
         }
 
         try {
-            File uploadDir = new File(uploadPath);
-            if (!uploadDir.exists()) {
-                uploadDir.mkdirs();
-            }
-
             String originalFilename = file.getOriginalFilename();
             String extension = "";
             if (originalFilename != null && originalFilename.contains(".")) {
@@ -99,7 +101,7 @@ public class PhotoController {
             return response;
         }
 
-        File file = new File(uploadPath, filename);
+        File file = new File(uploadDir, filename);
         if (file.exists() && file.delete()) {
             response.put("success", true);
             response.put("message", "删除成功");
