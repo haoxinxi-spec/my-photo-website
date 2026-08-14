@@ -1,5 +1,5 @@
 <template>
-  <div class="home">
+  <div class="home" @click="closeContextMenu">
     <!-- 左上角头像 + 下拉菜单 -->
     <div class="avatar-wrapper" v-click-outside="closeDropdown">
       <div class="avatar" @click="toggleDropdown">
@@ -53,9 +53,10 @@
     <header class="page-header">
       <h1>我的照片墙</h1>
       <p v-if="bio" class="header-bio">{{ bio }}</p>
+      <p class="hint">💡 在照片上点击右键可以编辑简介或删除</p>
     </header>
 
-    <!-- 照片展示（不规则排列） -->
+    <!-- 照片展示 -->
     <main class="photo-gallery">
       <div v-if="loading" class="loading">加载中...</div>
       <div v-else-if="photos.length === 0" class="empty">
@@ -66,18 +67,60 @@
           v-for="(photo, idx) in photos"
           :key="photo.name"
           class="photo-item"
-          :class="'variant-' + (idx % 5)"
-          @click="openPreview(photo)"
+          :class="['variant-' + (idx % 5), { flipped: flippedPhoto === photo.name }]"
+          @click="onPhotoClick($event, photo)"
+          @contextmenu.prevent="onContextMenu($event, photo)"
         >
-          <img :src="photo.url" :alt="photo.name" loading="lazy" />
+          <div class="card-inner">
+            <div class="card-face card-front">
+              <img :src="photo.url" :alt="photo.name" loading="lazy" />
+            </div>
+            <div class="card-face card-back" @click.stop>
+              <div class="back-title">照片简介</div>
+              <textarea
+                v-model="descriptions[photo.name]"
+                @blur="saveDescription(photo.name)"
+                placeholder="给这张照片写点介绍..."
+              ></textarea>
+              <div class="back-actions">
+                <button class="back-btn" @click="flipBack">✓ 完成</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </main>
 
+    <!-- 右键菜单 -->
+    <transition name="fade">
+      <div
+        v-if="contextMenu.show"
+        class="context-menu"
+        :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }"
+        @click.stop
+      >
+        <div class="context-item" @click="handleFlip">
+          <span class="ctx-icon">🔄</span>
+          <span>翻面编辑简介</span>
+        </div>
+        <div class="context-divider"></div>
+        <div class="context-item danger" @click="handleDelete">
+          <span class="ctx-icon">🗑️</span>
+          <span>删除照片</span>
+        </div>
+      </div>
+    </transition>
+
     <!-- 大图预览 -->
     <transition name="fade">
       <div v-if="preview" class="preview-mask" @click="closePreview">
-        <img :src="preview.url" :alt="preview.name" />
+        <div class="preview-content" @click.stop>
+          <img :src="preview.url" :alt="preview.name" />
+          <div v-if="descriptions[preview.name]" class="preview-desc">
+            {{ descriptions[preview.name] }}
+          </div>
+          <button class="preview-close" @click="closePreview">×</button>
+        </div>
       </div>
     </transition>
   </div>
@@ -98,7 +141,15 @@ export default {
       uploading: false,
       uploadMsg: '',
       uploadError: false,
-      preview: null
+      preview: null,
+      descriptions: {},
+      flippedPhoto: null,
+      contextMenu: {
+        show: false,
+        x: 0,
+        y: 0,
+        target: null
+      }
     }
   },
   computed: {
@@ -109,7 +160,12 @@ export default {
   mounted() {
     this.username = localStorage.getItem('username') || 'Admin'
     this.bio = localStorage.getItem('bio') || ''
+    this.loadDescriptions()
     this.fetchPhotos()
+    window.addEventListener('scroll', this.closeContextMenu)
+  },
+  beforeUnmount() {
+    window.removeEventListener('scroll', this.closeContextMenu)
   },
   methods: {
     toggleDropdown() {
@@ -120,6 +176,17 @@ export default {
     },
     saveBio() {
       localStorage.setItem('bio', this.bio)
+    },
+    loadDescriptions() {
+      try {
+        const raw = localStorage.getItem('photoDescriptions')
+        this.descriptions = raw ? JSON.parse(raw) : {}
+      } catch (e) {
+        this.descriptions = {}
+      }
+    },
+    saveDescription(name) {
+      localStorage.setItem('photoDescriptions', JSON.stringify(this.descriptions))
     },
     async fetchPhotos() {
       this.loading = true
@@ -151,9 +218,7 @@ export default {
         formData.append('file', file)
         try {
           const res = await axios.post('/api/photos/upload', formData, {
-            headers: {
-              Authorization: token
-            }
+            headers: { Authorization: token }
           })
           if (res.data.success) {
             successCount++
@@ -187,11 +252,68 @@ export default {
         this.uploadMsg = ''
       }, this.uploadError ? 8000 : 3000)
     },
+    onPhotoClick(event, photo) {
+      // 翻面状态下，正面点击不预览（背面 click.stop 已处理）
+      if (this.flippedPhoto === photo.name) return
+      this.openPreview(photo)
+    },
     openPreview(photo) {
       this.preview = photo
     },
     closePreview() {
       this.preview = null
+    },
+    onContextMenu(event, photo) {
+      // 计算菜单位置，避免溢出屏幕
+      const menuWidth = 180
+      const menuHeight = 100
+      let x = event.clientX
+      let y = event.clientY
+      if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 10
+      if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 10
+
+      this.contextMenu = {
+        show: true,
+        x,
+        y,
+        target: photo
+      }
+    },
+    closeContextMenu() {
+      this.contextMenu.show = false
+    },
+    handleFlip() {
+      const photo = this.contextMenu.target
+      this.flippedPhoto = photo.name
+      this.closeContextMenu()
+    },
+    flipBack() {
+      this.flippedPhoto = null
+    },
+    async handleDelete() {
+      const photo = this.contextMenu.target
+      this.closeContextMenu()
+      if (!confirm(`确定要删除这张照片吗？此操作不可撤销。`)) return
+
+      const token = localStorage.getItem('token')
+      try {
+        const res = await axios.delete(`/api/photos/delete/${photo.name}`, {
+          headers: { Authorization: token }
+        })
+        if (res.data.success) {
+          // 同步清理该照片的简介
+          if (this.descriptions[photo.name]) {
+            delete this.descriptions[photo.name]
+            localStorage.setItem('photoDescriptions', JSON.stringify(this.descriptions))
+          }
+          if (this.flippedPhoto === photo.name) this.flippedPhoto = null
+          this.fetchPhotos()
+        } else {
+          alert('删除失败：' + (res.data.message || '未知错误'))
+        }
+      } catch (e) {
+        alert('删除失败：' + (e.response && e.response.data && e.response.data.message ? e.response.data.message : e.message))
+      }
     },
     logout() {
       localStorage.removeItem('token')
@@ -387,11 +509,17 @@ export default {
   color: #606266;
   font-size: 14px;
   max-width: 600px;
-  margin: 0 auto;
+  margin: 0 auto 8px;
   line-height: 1.6;
 }
 
-/* 照片墙 - 不规则布局 */
+.hint {
+  color: #a0a4ab;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+/* 照片墙 - 每行 2-3 张 */
 .photo-gallery {
   max-width: 1400px;
   margin: 0 auto;
@@ -406,74 +534,197 @@ export default {
 }
 
 .masonry {
-  column-count: 4;
-  column-gap: 16px;
+  column-count: 3;
+  column-gap: 24px;
 }
 
-@media (max-width: 1200px) {
-  .masonry { column-count: 3; }
-}
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .masonry { column-count: 2; }
 }
-@media (max-width: 480px) {
+@media (max-width: 520px) {
   .masonry { column-count: 1; }
 }
 
 .photo-item {
   break-inside: avoid;
-  margin-bottom: 16px;
-  border-radius: 14px;
-  overflow: hidden;
+  margin-bottom: 24px;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s, box-shadow 0.3s;
   position: relative;
+  perspective: 1200px;
 }
 
-.photo-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+.card-inner {
+  position: relative;
+  width: 100%;
+  transition: transform 0.7s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transform-style: preserve-3d;
 }
 
-.photo-item img {
+.photo-item.flipped .card-inner {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  width: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s, transform 0.3s;
+  overflow: hidden;
+}
+
+.card-front {
+  border-radius: 6px;
+}
+
+.card-front img {
   width: 100%;
   display: block;
   transition: transform 0.4s;
 }
 
-.photo-item:hover img {
+.photo-item:not(.flipped):hover .card-front {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  transform: translateY(-3px);
+}
+
+.photo-item:not(.flipped):hover .card-front img {
   transform: scale(1.03);
 }
 
-/* 不规则变体 —— 略微不同的圆角、边距、旋转 */
-.photo-item.variant-0 {
-  border-radius: 14px;
+/* 背面 */
+.card-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  min-height: 260px;
+  background: linear-gradient(135deg, #f9fafc 0%, #eef1f7 100%);
+  border-radius: 6px;
+  transform: rotateY(180deg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  cursor: default;
+}
+
+.back-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #dcdfe6;
+}
+
+.card-back textarea {
+  flex: 1;
+  width: 100%;
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #2c3e50;
+  resize: none;
+  background: #fff;
+  line-height: 1.6;
+}
+
+.card-back textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.back-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.back-btn {
+  padding: 6px 14px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 12px;
+  transition: opacity 0.2s;
+}
+
+.back-btn:hover {
+  opacity: 0.9;
+}
+
+/* 不规则变体 —— 圆角更小、微旋转差异保留 */
+.photo-item.variant-0 .card-face {
+  border-radius: 6px;
 }
 .photo-item.variant-1 {
-  border-radius: 20px 8px 20px 8px;
-  transform: rotate(-0.5deg);
+  transform: rotate(-0.4deg);
 }
-.photo-item.variant-1:hover {
-  transform: rotate(0) translateY(-4px);
+.photo-item.variant-1 .card-face {
+  border-radius: 10px 4px 10px 4px;
 }
 .photo-item.variant-2 {
-  border-radius: 8px 20px 8px 20px;
-  transform: rotate(0.5deg);
+  transform: rotate(0.4deg);
 }
-.photo-item.variant-2:hover {
-  transform: rotate(0) translateY(-4px);
+.photo-item.variant-2 .card-face {
+  border-radius: 4px 10px 4px 10px;
 }
-.photo-item.variant-3 {
-  border-radius: 24px;
-  margin-top: 8px;
+.photo-item.variant-3 .card-face {
+  border-radius: 8px;
 }
 .photo-item.variant-4 {
-  border-radius: 10px;
-  transform: rotate(-0.3deg);
+  transform: rotate(-0.2deg);
 }
-.photo-item.variant-4:hover {
-  transform: rotate(0) translateY(-4px);
+.photo-item.variant-4 .card-face {
+  border-radius: 5px;
+}
+
+/* 右键菜单 */
+.context-menu {
+  position: fixed;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.18);
+  padding: 6px;
+  z-index: 300;
+  min-width: 180px;
+  user-select: none;
+}
+
+.context-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #2c3e50;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.context-item:hover {
+  background: #f5f7fa;
+}
+
+.context-item.danger {
+  color: #f56c6c;
+}
+
+.context-item.danger:hover {
+  background: #fef0f0;
+}
+
+.ctx-icon {
+  font-size: 14px;
+}
+
+.context-divider {
+  height: 1px;
+  background: #ebeef5;
+  margin: 4px 8px;
 }
 
 /* 大图预览 */
@@ -492,11 +743,50 @@ export default {
   cursor: zoom-out;
 }
 
-.preview-mask img {
+.preview-content {
+  position: relative;
   max-width: 90%;
   max-height: 90vh;
-  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: default;
+}
+
+.preview-content img {
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: 8px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.preview-desc {
+  margin-top: 16px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #2c3e50;
+  border-radius: 8px;
+  max-width: 600px;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.preview-close {
+  position: absolute;
+  top: -16px;
+  right: -16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  color: #2c3e50;
+  font-size: 22px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* 动画 */
